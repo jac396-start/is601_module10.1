@@ -90,18 +90,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # DUAL FIX STEP 1: Forcefully replace the vulnerable version in the file on the runner.
-      - name: Force python-jose version to 3.4.0
-        run: sed -i 's/python-jose==3.3.0/python-jose==3.4.0/' requirements.txt
-
-      # DUAL FIX STEP 2: Use cache-busting mechanism to ensure Docker sees the file as changed.
-      - name: Force Docker Cache Bust for Requirements
-        run: echo "# CACHE BUSTER: $(date +%s)" >> requirements.txt  
-
       - name: Build image
-        # ADDITION: --no-cache flag to completely bypass Docker layer caching
-        run: docker build --no-cache -t app:test .
-
+        run: docker build -t app:test .
+      
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
