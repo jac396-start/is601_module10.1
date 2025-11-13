@@ -37,32 +37,44 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          # Install development files for Python and PostgreSQL
-          sudo apt-get install -y python3-dev gcc libpq-dev     
-
-      - name: Install dependencies
+      - name: Setup, Install, and Test
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/mytestdb
+        # This single run block combines all setup, installation, and testing
+        # to ensure the 'source venv/bin/activate' environment is maintained
         run: |
-          # 1. Ensure any old, potentially corrupted venv is removed
-          set -e # Stops execution immediately on any command failure
+          # Ensure any previous venv is removed to prevent corruption
           rm -rf venv
+          
+          # Install system dependencies needed to build packages (like psycopg2)
+          echo "--- Installing System Dependencies ---"
+          sudo apt-get update
+          sudo apt-get install -y python3-dev gcc libpq-dev
+          
+          # 1. Create venv
           python -m venv venv
+          
+          # 2. Activate venv (Crucial: path modifications only last for this run block)
           source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt --no-cache-dir
+          
+          # Set flag to exit immediately if any command fails
+          set -e
+          
+          # 3. Install dependencies robustly
+          echo "--- Installing Python Dependencies (psycopg2 first) ---"
+          # Install psycopg2-binary separately to isolate potential build errors
+          pip install psycopg2-binary --no-cache-dir
+          
+          # Install remaining dependencies from requirements.txt
+          pip install -r requirements.txt --upgrade pip --no-cache-dir
+          playwright install 
+          
           echo "--- Installed Python Packages ---"
           pip freeze
-          playwright install  # if you use Playwright for e2e tests
-      
-      - name: Run tests
-        env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/mytestdb
-        run: |
-                    
+          
+          # 4. Run tests
+          echo "--- Running Tests ---"
+          
           # 1) Unit tests
           pytest tests/unit/ --cov=src --junitxml=test-results/junit.xml
           
@@ -77,10 +89,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Build image
         run: docker build -t app:test .
-      
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -89,7 +101,7 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
-  
+
   deploy:
     needs: security
     if: github.ref == 'refs/heads/main'
@@ -97,20 +109,20 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: docker/setup-buildx-action@v3
-      
+
       - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          
+
       - uses: docker/build-push-action@v5
         with:
           push: true
           tags: |
-            kaw393939/601_module9:latest
-            kaw393939/601_module9:${{ github.sha }}
+            jcrawford169/is601_module10.1:latest
+            jcrawford169/is601_module10.1:${{ github.sha }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=kaw393939/601_module9:cache
+          cache-from: type=registry,ref=jcrawford169/is601_module10.1:cache
           cache-to: type=inline,mode=max
