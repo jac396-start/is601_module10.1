@@ -42,10 +42,10 @@ jobs:
           DATABASE_URL: postgresql://user:password@localhost:5432/mytestdb
         run: |
           python -m venv venv
-          # --- FIX APPLIED HERE: Use explicit path for all venv executables ---
-          ./venv/bin/pip install --upgrade pip
-          ./venv/bin/pip install -r requirements.txt
-          ./venv//bin/playwright install  # if you use Playwright for e2e tests
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install  # if you use Playwright for e2e tests
       
       - name: Run tests
         env:
@@ -53,13 +53,13 @@ jobs:
         run: |
                     
           # 1) Unit tests
-          ./venv/bin/pytest tests/unit/ --cov=src --junitxml=test-results/junit.xml
+          pytest tests/unit/ --cov=src --junitxml=test-results/junit.xml
           
           # 2) Integration tests
-          ./venv/bin/pytest tests/integration/
+          pytest tests/integration/
           
           # 3) E2E or other tests
-          ./venv/bin/pytest tests/e2e/
+          pytest tests/e2e/
 
   security:
     needs: test
