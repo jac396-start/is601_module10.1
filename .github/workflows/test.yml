@@ -38,6 +38,7 @@ jobs:
             ${{ runner.os }}-pip-
       
       - name: Install dependencies
+        shell: bash
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/mytestdb
         run: |
@@ -48,6 +49,7 @@ jobs:
           playwright install  # if you use Playwright for e2e tests
       
       - name: Run tests
+        shell: bash
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/mytestdb
         run: |
